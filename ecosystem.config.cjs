@@ -1,17 +1,22 @@
 module.exports = {
-  apps: [
-    {
-      name: "correios-api",
-      cwd: "/var/www/correios",
-      script: "server.mjs",
-      interpreter: "node",
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      env: {
-        PORT: 3001,
-        CONFIG_ENC_KEY: "troque_para_uma_chave_de_32_chars_________"
-      }
-    }
-  ]
-}
+  apps: [{
+    name: 'correios',
+    script: 'server.mjs',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3001
+    },
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 3001
+    },
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true
+  }]
+};
