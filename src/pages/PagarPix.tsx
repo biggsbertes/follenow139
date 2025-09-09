@@ -16,7 +16,21 @@ const PagarPix = () => {
   const [pixCode, setPixCode] = useState<string>("");
   const [amountBrl, setAmountBrl] = useState<number>(0);
   const navigate = useNavigate();
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:3001";
+  // Detectar automaticamente a URL da API
+  const getApiBase = () => {
+    const envApiBase = (import.meta as any).env?.VITE_API_BASE;
+    if (envApiBase) return envApiBase;
+    
+    // Se estiver em produção (sem localhost), usar o mesmo domínio
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return window.location.origin;
+    }
+    
+    // Desenvolvimento local
+    return "http://localhost:3001";
+  };
+  
+  const API_BASE = getApiBase();
   const [trackingCode, setTrackingCode] = useState<string>("");
 
   const toggleMenu = () => {
