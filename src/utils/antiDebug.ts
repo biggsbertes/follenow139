@@ -1,5 +1,9 @@
 // Anti-debugger e proteção contra inspeção
 export const initAntiDebug = () => {
+  // DESABILITADO TEMPORARIAMENTE PARA DESENVOLVIMENTO
+  console.log('Anti-debug desabilitado para desenvolvimento');
+  return;
+  
   // Skip anti-debug protections in development and on localhost
   const isLocalhost = typeof window !== 'undefined' && [
     'localhost',
@@ -108,13 +112,6 @@ export const initAntiDebug = () => {
     },
     set: () => {}
   });
-
-  setInterval(() => {
-    if (checkStatus) {
-      document.body.innerHTML = '<h1>Console detectado - Acesso negado</h1>';
-      window.location.href = 'about:blank';
-    }
-  }, 1000);
 
   // 7. Bloquear seleção de texto
   document.addEventListener('selectstart', (e) => {

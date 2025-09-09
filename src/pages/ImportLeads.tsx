@@ -11,21 +11,7 @@ const CSV_HEADERS = [
   "Name","CPF","Email","Telephone","Country","State","City","Address","Zipcode","Merchant","Product","Product Value","Provider","Service","Tracking","Provider Info 1","Provider Info 2","Provider Info 3"
 ];
 
-// Detectar automaticamente a URL da API
-const getApiBase = () => {
-  const envApiBase = (import.meta as any).env?.VITE_API_BASE;
-  if (envApiBase) return envApiBase;
-  
-  // Se estiver em produção (sem localhost), usar o mesmo domínio
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return window.location.origin;
-  }
-  
-  // Desenvolvimento local
-  return "http://localhost:3001";
-};
-
-const API_BASE = getApiBase();
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:3001";
 
 function splitCsvLine(line: string): string[] {
   // Método mais robusto para dividir CSV

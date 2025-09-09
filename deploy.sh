@@ -11,6 +11,11 @@ pm2 delete correios || true
 echo "📦 Instalando dependências..."
 npm install
 
+# Configurar variáveis de ambiente para produção
+echo "🔧 Configurando variáveis de ambiente..."
+cp env-production.txt .env
+export VITE_API_BASE="https://correios-tracking.com"
+
 # Fazer build do frontend React
 echo "🏗️ Fazendo build do frontend..."
 npm run build
