@@ -16,8 +16,27 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1); // Confiar no primeiro proxy (Nginx)
 
 app.use(compression()); // Comprimir respostas
-app.use(cors());
-app.use(express.json({ limit: "10mb" })); // Reduzir limite
+app.use(cors({
+  origin: true, // Permitir todas as origens
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+}));
+app.use(express.json({ limit: "500mb" })); // Aumentar limite para arquivos muito grandes
+app.use(express.urlencoded({ limit: "500mb", extended: true })); // Para formulários
+
+// Middleware para lidar com erros de payload
+app.use((error, req, res, next) => {
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ 
+      error: 'Arquivo muito grande', 
+      message: 'O arquivo enviado excede o limite de 500MB. Tente dividir em arquivos menores ou usar compressão.',
+      limit: '500MB',
+      suggestion: 'Divida o arquivo em lotes menores ou use compressão gzip'
+    });
+  }
+  next(error);
+});
 
 // JWT Secret removido por segurança
 
@@ -442,6 +461,37 @@ const authenticateImport = (req, res, next) => {
   next();
 };
 
+// Rota para upload de arquivos grandes em chunks
+app.post("/api/leads/upload-chunk", (req, res) => {
+  try {
+    const { chunk, chunkIndex, totalChunks, fileName } = req.body || {};
+    
+    if (!chunk || !Array.isArray(chunk)) {
+      return res.status(400).json({ error: "Chunk de dados é obrigatório" });
+    }
+    
+    // Simular processamento do chunk
+    console.log(`[CHUNK] Processando chunk ${chunkIndex + 1}/${totalChunks} do arquivo ${fileName}`);
+    
+    // Aqui você pode salvar o chunk temporariamente ou processar diretamente
+    // Por enquanto, vamos apenas confirmar o recebimento
+    
+    res.json({ 
+      success: true, 
+      chunkIndex: chunkIndex + 1,
+      totalChunks,
+      message: `Chunk ${chunkIndex + 1}/${totalChunks} recebido com sucesso`
+    });
+    
+  } catch (error) {
+    console.error('[CHUNK] Erro:', error);
+    res.status(500).json({ 
+      error: "Falha no processamento do chunk", 
+      details: error.message 
+    });
+  }
+});
+
 // Rota segura para importar leads via CSV
 app.post("/api/secure/import-leads", authenticateImport, (req, res) => {
   try {
@@ -458,30 +508,42 @@ app.post("/api/secure/import-leads", authenticateImport, (req, res) => {
       usd_brl_rate_cents: parseInt(process.env.USD_BRL_RATE_CENTS) || 520
     };
     
-    const insertMany = db.transaction((items) => {
-      for (const item of items) {
-        const id = item.id || crypto.randomUUID();
-        const status = item.status === "paid" ? "paid" : "pending";
-        const created_at = item.createdAt || now;
-        const tarifa_brl = typeof item.tarifa_brl === 'number' ? item.tarifa_brl : null;
-        
-        insertLeadStmt.run({
-          id,
-          fields_json: JSON.stringify(item.fields || item),
-          status,
-          created_at,
-          tarifa_brl,
-        });
-      }
-    });
+    // Processar em lotes de 1000 para evitar sobrecarga
+    const batchSize = 1000;
+    let totalInserted = 0;
     
-    insertMany(rows);
-    console.log(`[SECURE IMPORT] ${rows.length} leads importados com sucesso`);
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      
+      const insertMany = db.transaction((items) => {
+        for (const item of items) {
+          const id = item.id || crypto.randomUUID();
+          const status = item.status === "paid" ? "paid" : "pending";
+          const created_at = item.createdAt || now;
+          const tarifa_brl = typeof item.tarifa_brl === 'number' ? item.tarifa_brl : null;
+          
+          insertLeadStmt.run({
+            id,
+            fields_json: JSON.stringify(item.fields || item),
+            status,
+            created_at,
+            tarifa_brl,
+          });
+        }
+      });
+      
+      insertMany(batch);
+      totalInserted += batch.length;
+      
+      console.log(`[SECURE IMPORT] Processado lote ${Math.floor(i/batchSize) + 1}: ${batch.length} leads (Total: ${totalInserted})`);
+    }
+    
+    console.log(`[SECURE IMPORT] ${totalInserted} leads importados com sucesso`);
     
     res.json({ 
       success: true, 
-      imported: rows.length,
-      message: `${rows.length} leads importados com sucesso`
+      imported: totalInserted,
+      message: `${totalInserted} leads importados com sucesso`
     });
     
   } catch (error) {
@@ -515,39 +577,58 @@ app.get("/api/secure/import-status", authenticateImport, (req, res) => {
 });
 
 app.post("/api/leads/import", (req, res) => {
-  const { rows } = req.body || {};
-  if (!Array.isArray(rows)) {
-    return res.status(400).json({ error: "Body must include array 'rows'" });
-  }
-  const now = Date.now();
-  const cfg = {
-    tarifa_brl_default: parseInt(process.env.TARIFA_BRL_DEFAULT) || 6471,
-    tax_percent: parseInt(process.env.TAX_PERCENT) || 50,
-    usd_brl_rate_cents: parseInt(process.env.USD_BRL_RATE_CENTS) || 520
-  };
-  const defaultTarifa = null; // keep null to compute dynamically later
-  const insertMany = db.transaction((items) => {
-    for (const item of items) {
-      const id = item.id || crypto.randomUUID();
-      const status = item.status === "paid" ? "paid" : "pending";
-      const created_at = item.createdAt || now;
-      const tarifa_brl = typeof item.tarifa_brl === 'number' ? item.tarifa_brl : defaultTarifa;
-      insertLeadStmt.run({
-        id,
-        fields_json: JSON.stringify(item.fields || item),
-        status,
-        created_at,
-        tarifa_brl,
-      });
-    }
-  });
   try {
-    insertMany(rows);
+    const { rows } = req.body || {};
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ error: "Body must include array 'rows'" });
+    }
+    
+    console.log(`[IMPORT] Iniciando importação de ${rows.length} leads...`);
+    
+    const now = Date.now();
+    const cfg = {
+      tarifa_brl_default: parseInt(process.env.TARIFA_BRL_DEFAULT) || 6471,
+      tax_percent: parseInt(process.env.TAX_PERCENT) || 50,
+      usd_brl_rate_cents: parseInt(process.env.USD_BRL_RATE_CENTS) || 520
+    };
+    const defaultTarifa = null; // keep null to compute dynamically later
+    
+    // Processar em lotes de 1000 para evitar sobrecarga
+    const batchSize = 1000;
+    let totalInserted = 0;
+    
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      
+      const insertMany = db.transaction((items) => {
+        for (const item of items) {
+          const id = item.id || crypto.randomUUID();
+          const status = item.status === "paid" ? "paid" : "pending";
+          const created_at = item.createdAt || now;
+          const tarifa_brl = typeof item.tarifa_brl === 'number' ? item.tarifa_brl : defaultTarifa;
+          insertLeadStmt.run({
+            id,
+            fields_json: JSON.stringify(item.fields || item),
+            status,
+            created_at,
+            tarifa_brl,
+          });
+        }
+      });
+      
+      insertMany(batch);
+      totalInserted += batch.length;
+      
+      console.log(`[IMPORT] Processado lote ${Math.floor(i/batchSize) + 1}: ${batch.length} leads (Total: ${totalInserted})`);
+    }
+    
+    console.log(`[IMPORT] Importação concluída: ${totalInserted} leads importados com sucesso`);
+    res.json({ ok: true, inserted: totalInserted });
+    
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Failed to import" });
+    console.error('[IMPORT] Erro na importação:', e);
+    return res.status(500).json({ error: "Failed to import", details: e.message });
   }
-  res.json({ ok: true, inserted: rows.length });
 });
 
 // TODAS AS ROTAS DE ADMIN REMOVIDAS PERMANENTEMENTE POR SEGURANÇA
@@ -940,6 +1021,4 @@ app.listen(PORT, () => {
   console.log(`📊 Monitoramento: http://localhost:${PORT}/api/status`);
   console.log(`⚡ Otimizações aplicadas: Rate limiting, Cache, Compressão, Índices`);
 });
-
-
 
