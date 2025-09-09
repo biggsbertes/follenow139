@@ -11,6 +11,10 @@ pm2 delete correios || true
 echo "📦 Instalando dependências..."
 npm install
 
+# Fazer build do frontend React
+echo "🏗️ Fazendo build do frontend..."
+npm run build
+
 # Criar diretório de logs se não existir
 echo "📁 Criando diretório de logs..."
 mkdir -p logs

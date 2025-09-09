@@ -2,7 +2,9 @@
 
 ## ✅ **Problema Resolvido!**
 
-Agora sua API tem uma **página inicial bonita** que mostra todos os endpoints disponíveis!
+Agora sua aplicação está configurada corretamente:
+- **Desenvolvimento**: Frontend React na porta 8080, API na porta 3001
+- **Produção**: Frontend React servido pela API na porta 3001
 
 ## 📋 **Como Fazer o Deploy na VPS:**
 
@@ -68,7 +70,7 @@ pm2 save
 # Ver logs
 pm2 logs correios-api --lines 20
 
-# Testar a página inicial
+# Testar a página inicial (deve mostrar seu site React)
 curl http://localhost:3001/
 
 # Testar a API
@@ -78,10 +80,9 @@ curl http://localhost:3001/api/health
 ## 🎯 **O que Você Vai Ver Agora:**
 
 ### **Página Inicial (http://seu-dominio.com/)**
-- ✅ Página bonita com todos os endpoints
-- ✅ Status da API
-- ✅ Links para testar cada endpoint
-- ✅ Informações do servidor
+- ✅ Seu site React completo
+- ✅ Todas as funcionalidades do frontend
+- ✅ API funcionando em background
 
 ### **Endpoints Funcionando:**
 - ✅ `/api/health` - Status da API
