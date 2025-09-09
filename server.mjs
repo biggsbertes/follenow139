@@ -134,6 +134,110 @@ const updateLeadStmt = db.prepare(
 const deleteLeadStmt = db.prepare(`DELETE FROM leads WHERE id = ?`);
 const getLeadStmt = db.prepare(`SELECT * FROM leads WHERE id = ?`);
 
+// Página inicial
+app.get("/", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Correios API</title>
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                max-width: 800px; 
+                margin: 50px auto; 
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container { 
+                background: rgba(255,255,255,0.1); 
+                padding: 30px; 
+                border-radius: 15px; 
+                backdrop-filter: blur(10px);
+            }
+            h1 { color: #fff; text-align: center; }
+            .endpoint { 
+                background: rgba(255,255,255,0.2); 
+                padding: 15px; 
+                margin: 10px 0; 
+                border-radius: 8px; 
+                border-left: 4px solid #4CAF50;
+            }
+            .method { 
+                background: #4CAF50; 
+                color: white; 
+                padding: 4px 8px; 
+                border-radius: 4px; 
+                font-weight: bold; 
+                margin-right: 10px;
+            }
+            .status { 
+                background: #2196F3; 
+                color: white; 
+                padding: 4px 8px; 
+                border-radius: 4px; 
+                font-weight: bold; 
+                margin-right: 10px;
+            }
+            a { color: #FFD700; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 Correios API</h1>
+            <p style="text-align: center; font-size: 18px;">API funcionando perfeitamente!</p>
+            
+            <h2>📊 Endpoints Disponíveis:</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/health">/api/health</a> - Status da API
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/status">/api/status</a> - Status detalhado do servidor
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/leads">/api/leads</a> - Listar leads
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/leads/metrics">/api/leads/metrics</a> - Métricas de leads
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/payments/metrics">/api/payments/metrics</a> - Métricas de pagamentos
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <a href="/api/payments/recent">/api/payments/recent</a> - Pagamentos recentes
+            </div>
+            
+            <h2>🔧 Informações do Servidor:</h2>
+            <p><strong>Porta:</strong> ${PORT}</p>
+            <p><strong>Ambiente:</strong> ${process.env.NODE_ENV || 'development'}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <span class="status">✅ ONLINE</span>
+                <span style="margin-left: 20px;">API rodando perfeitamente!</span>
+            </div>
+        </div>
+    </body>
+    </html>
+  `);
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
